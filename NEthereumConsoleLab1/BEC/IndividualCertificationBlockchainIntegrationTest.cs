@@ -1,31 +1,32 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
-using System.Net;
-using System.Text;
-using Nethereum.ABI.JsonDeserialisation;
+using System.Threading;
+using System.Threading.Tasks;
+using Nethereum.ABI.Util;
 using Nethereum.Geth;
+using Nethereum.Hex.HexTypes;
 using Nethereum.JsonRpc.Client;
 using Nethereum.RPC.Eth.DTOs;
-using Nethereum.Web3;
+using Nethereum.Util;
 using Nethereum.Web3.Accounts.Managed;
-
+using Xunit;
+using Xunit.Abstractions;
 
 namespace NEthereumConsoleLab1.BEC
 {
-    using System.Threading;
-    using System.Threading.Tasks;
-
-    using Nethereum.ABI.FunctionEncoding.Attributes;
-    using Nethereum.Hex.HexTypes;
-    using Xunit;
-
-    public class IndividualCertificationTest
+    public class IndividualCertificationBlockchainIntegrationTest
     {
         private const string WEB3_HOST = "http://localhost:8545/";
+        private const string PASSWORD = "password";
+        private const string SENDER = "0x12890d2cce102216644c59dae5baed380d84830c";
+        private readonly ITestOutputHelper output;
 
+        public IndividualCertificationBlockchainIntegrationTest(ITestOutputHelper output)
+        {
+            this.output = output;
+        }
         private string hashValue =
             "f6ae0a78e422de5e72b4b848d934f74db036c68ecee8083401b2d334b1997c21f614ee8d3f040f8f1e795ddb61ca9557adfeb9001bc2d9f0782abfdcdb21e0af";
 
@@ -47,29 +48,29 @@ namespace NEthereumConsoleLab1.BEC
         [Fact]
         public async Task ShouldDeployContract()
         {
-            var senderAddress = "0x12890d2cce102216644c59dae5baed380d84830c";
 
-
-            var account = new ManagedAccount(senderAddress, "password");
+            var account = new ManagedAccount(SENDER, PASSWORD);
             var web3 = new Web3Geth(account);
             var gas = new HexBigInteger(3000000);
 
             var txId = await web3.Eth.DeployContract
-                .SendRequestAsync(contractAbi, byteCode, senderAddress, gas, hashValue);
-            Task<TransactionReceipt> txReceiptTask = web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId);
-//            var miningResult = await web3.Miner.Start.SendRequestAsync(6);
-
-//            while(receipt == null){
-//                Thread.Sleep(1000);
-//                receipt = await web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId);
-//            }
-            Task.WhenAny(txReceiptTask).Wait();
-            var contractAddress = txReceiptTask.Result.ContractAddress;
+                .SendRequestAsync(contractAbi, byteCode, SENDER, gas, hashValue);
+            TransactionReceipt receipt = await web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId);
+            var timer = new Stopwatch();
+            timer.Start();
+            // Wait receipt forever
+            while(receipt == null) {
+                Thread.Sleep(1000);
+                receipt = await web3.Eth.Transactions.GetTransactionReceipt.SendRequestAsync(txId);
+            }
+            timer.Stop();
+            var elapsedTime = timer.ElapsedMilliseconds;
+            output.WriteLine("Deployment time: {0} (s)", TimeSpan.FromMilliseconds(elapsedTime).Seconds);
+            var contractAddress = receipt.ContractAddress;
             var contract = web3.Eth.GetContract(contractAbi, contractAddress);
             var hashValueGetter = contract.GetFunction("hashValue");
             var result = await hashValueGetter.CallAsync<string>();
-
-
+            
             Assert.Equal(hashValue, result);
 
         }
@@ -77,22 +78,26 @@ namespace NEthereumConsoleLab1.BEC
         [Fact]
         public async Task ShouldBulkDeployContract()
         {
-            var senderAddress = "0x12890d2cce102216644c59dae5baed380d84830c";
             var gas = new HexBigInteger(3000000);
-            var account = new ManagedAccount(senderAddress, "password");
+            var account = new ManagedAccount(SENDER, PASSWORD);
             var web3 = new Web3Geth(account);
 
             CancellationTokenSource cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            var timer = new Stopwatch();
+            timer.Start();
             IEnumerable<Task<TransactionReceipt>> txReceiptTaskQuery = hashList.Select(hash =>
                 web3.Eth.DeployContract.SendRequestAndWaitForReceiptAsync(
                     contractAbi,
                     byteCode,
-                    senderAddress,
+                    SENDER,
                     gas,
                     cancellationToken,
                     hash
                 ));
             TransactionReceipt[] receipts = await Task.WhenAll(txReceiptTaskQuery);
+            timer.Stop();
+            output.WriteLine("Deployment elapsed time: {0} (s)", TimeSpan.FromMilliseconds(timer.ElapsedMilliseconds).Seconds);
+
             foreach (var transactionReceipt in receipts)
             {
                 var contract = web3.Eth.GetContract(contractAbi, transactionReceipt.ContractAddress);
@@ -104,25 +109,73 @@ namespace NEthereumConsoleLab1.BEC
         }
 
         [Fact]
-        public async Task ShouldNotDeployContractDuetoInsufficientGas()
+        public async Task ShouldNotDeployContractDueToInsufficientGas()
         {
             var senderAddress = "0x12890d2cce102216644c59dae5baed380d84830c";
             var gas = new HexBigInteger(3000);
-            var account = new ManagedAccount(senderAddress, "password");
+            var account = new ManagedAccount(SENDER, PASSWORD);
             var web3 = new Web3Geth(account);
             
             CancellationTokenSource cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(15));
             await Assert.ThrowsAsync<RpcResponseException>(() =>
+            web3.Eth.DeployContract.SendRequestAndWaitForReceiptAsync(
+                contractAbi,
+                byteCode,
+                senderAddress,
+                gas,
+                cancellationToken,
+                hashValue
+                ));
+        }
+
+        [Fact]
+        public async Task ShouldCancelDeploymentDueToShortTimeout()
+        {
+            var gas = new HexBigInteger(3000000);
+            var account = new ManagedAccount(SENDER, PASSWORD);
+            var web3 = new Web3Geth(account);
+
+            CancellationTokenSource cancellationToken = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+            await Assert.ThrowsAsync<OperationCanceledException> (() =>
+                web3.Eth.DeployContract.SendRequestAndWaitForReceiptAsync(
+                contractAbi,
+                byteCode,
+                SENDER,
+                gas,
+                cancellationToken,
+                hashValue
+            ));
+        }
+
+
+        [Fact]
+        public async Task ShouldDeployWithFixedGasPrice()
+        {
+            var gas = new HexBigInteger(3000000);
+            var account = new ManagedAccount(SENDER, PASSWORD);
+            var web3 = new Web3Geth(account);
+            
+            var estimatedGasConsumed = await web3.Eth.DeployContract.EstimateGasAsync(contractAbi, byteCode, SENDER, hashValue);
+            var avgGasPrice = await web3.Eth.GasPrice.SendRequestAsync();
+            var unitConversion = new UnitConversion();
+            var gasPrice = unitConversion.FromWei(avgGasPrice);
+            output.WriteLine("Estimate gas: {0} & Average Gas price: {1}", estimatedGasConsumed.Value.ToString(), gasPrice.ToString());
+            CancellationTokenSource cancellationToken = new CancellationTokenSource(TimeSpan.FromSeconds(15));
+            TransactionReceipt txReceipt = await
                 web3.Eth.DeployContract.SendRequestAndWaitForReceiptAsync(
                     contractAbi,
                     byteCode,
-                    senderAddress,
+                    SENDER,
                     gas,
+                    avgGasPrice,
+                    null,
                     cancellationToken,
                     hashValue
-                ));
-
-
+                );
+            var contract = web3.Eth.GetContract(contractAbi, txReceipt.ContractAddress);
+            var hashFunc = contract.GetFunction("hashValue");
+            var reHashValue = await hashFunc.CallAsync<string>();
+            Assert.Equal(hashValue, reHashValue);
 
         }
     }

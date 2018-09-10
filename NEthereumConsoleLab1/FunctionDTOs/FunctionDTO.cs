@@ -1,14 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
+using Nethereum.ABI.FunctionEncoding.Attributes;
 using Nethereum.Hex.HexTypes;
 using Nethereum.RPC.Eth.DTOs;
-using Nethereum.ABI.FunctionEncoding.Attributes;
-using Xunit;
 using Nethereum.Web3.Accounts.Managed;
+using Xunit;
 
 namespace Nethereum.Tutorials
 {

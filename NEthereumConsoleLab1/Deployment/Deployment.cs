@@ -1,17 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Nethereum.Hex.HexTypes;
-using Xunit;
 using Nethereum.Web3.Accounts.Managed;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace Nethereum.Tutorials
 {
-    using Xunit.Abstractions;
-
     public class Deployment
     {
         private readonly ITestOutputHelper output;

@@ -1,8 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using Nethereum.ABI.FunctionEncoding.Attributes;
 using Nethereum.Hex.HexTypes;
-using Nethereum.ABI.FunctionEncoding.Attributes;
-using Xunit;
 using Nethereum.Web3.Accounts.Managed;
+using System.Threading.Tasks;
+using Xunit;
 
 namespace Nethereum.Tutorials
 {
