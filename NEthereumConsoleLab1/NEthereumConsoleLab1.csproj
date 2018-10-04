@@ -2,10 +2,23 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
+    <ApplicationIcon />
+    <Win32Resource />
   </PropertyGroup>
   <ItemGroup>
-    <Compile Remove="BEC\ShouldGetCertifierContract.cs" />
+    <Compile Remove="testchain\**" />
+    <EmbeddedResource Remove="testchain\**" />
+    <None Remove="testchain\**" />
   </ItemGroup>
+  <ItemGroup>
+    <None Remove="contracts\IndividualCertification.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="contracts\IndividualCertification.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </EmbeddedResource>
+  </ItemGroup>
+ 
  
   <ItemGroup>
     <PackageReference Include="Common.Logging.Core" Version="3.4.1" />
@@ -14,5 +27,11 @@
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.2" />
     <PackageReference Include="XUnit" Version="2.3.1" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
+  </ItemGroup>
+   <ItemGroup>
+    <Folder Include="contracts\">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Folder>
+    <Folder Include="Properties\" />
   </ItemGroup>
 </Project>
