@@ -10,14 +10,6 @@
     <EmbeddedResource Remove="testchain\**" />
     <None Remove="testchain\**" />
   </ItemGroup>
-  <ItemGroup>
-    <None Remove="contracts\IndividualCertification.json" />
-  </ItemGroup>
-  <ItemGroup>
-    <EmbeddedResource Include="contracts\IndividualCertification.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </EmbeddedResource>
-  </ItemGroup>
  
  
   <ItemGroup>

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,6 +12,8 @@ using Nethereum.JsonRpc.Client;
 using Nethereum.RPC.Eth.DTOs;
 using Nethereum.Util;
 using Nethereum.Web3.Accounts.Managed;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Asn1.Esf;
 using Xunit;
 using Xunit.Abstractions;
@@ -26,12 +29,16 @@ namespace NEthereumConsoleLab1.BEC
         private readonly HexBigInteger gasLimit = new HexBigInteger(3000000);
         private readonly ITestOutputHelper output;
         private readonly EthereumClientIntegrationFixture ethereumClientIntegrationFixture;
+        private static readonly JObject UserDB =
+            JsonConvert.DeserializeObject<JObject>(
+                File.ReadAllText(@"../contracts/IndividualCertification.json"));
         public IndividualCertificationBlockchainIntegrationTest(
             EthereumClientIntegrationFixture ethereumClientIntegrationFixture,
             ITestOutputHelper output)
         {
             this.output = output;
             this.ethereumClientIntegrationFixture = ethereumClientIntegrationFixture;
+       
         }
         private string hashValue =
             "f6ae0a78e422de5e72b4b848d934f74db036c68ecee8083401b2d334b1997c21f614ee8d3f040f8f1e795ddb61ca9557adfeb9001bc2d9f0782abfdcdb21e0af";
@@ -190,24 +197,7 @@ namespace NEthereumConsoleLab1.BEC
                 hashValue
                 ));
         }
-
-        [Fact]
-        public async Task ShouldCancelDeploymentDueToShortTimeout()
-        {
-            var web3 = ethereumClientIntegrationFixture.GetWeb3();
-            CancellationTokenSource cancellationToken = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
-            await Assert.ThrowsAsync<OperationCanceledException>(() =>
-               web3.Eth.DeployContract.SendRequestAndWaitForReceiptAsync(
-               contractAbi,
-               byteCode,
-               sender,
-               gasLimit,
-               cancellationToken,
-               hashValue
-           ));
-        }
-
-
+       
         [Theory]
         [InlineData("f6ae0a78e422de5e72b4b848d934f74db036c68ecee8083401b2d334b1997c21f614ee8d3f040f8f1e795ddb61ca9557adfeb9001bc2d9f0782abfdcdb21e000")]
         [InlineData("f6ae0a78e422de5e72b4b848d934f74db036c68ecee8083401b2d334b1997c21f614ee8d3f040f8f1e795ddb61ca9557adfeb9001bc2d9f0782abfdcdb21e001")]
@@ -235,7 +225,24 @@ namespace NEthereumConsoleLab1.BEC
             var hashFunc = contract.GetFunction("hashValue");
             var actualHashValue = await hashFunc.CallAsync<string>();
             Assert.Equal(inputHashValue, actualHashValue);
-
         }
+        [Fact]
+        public async Task ShouldCancelDeploymentDueToShortTimeout()
+        {
+            var web3 = ethereumClientIntegrationFixture.GetWeb3();
+            CancellationTokenSource cancellationToken = new CancellationTokenSource(TimeSpan.FromMilliseconds(500));
+            await Assert.ThrowsAsync<OperationCanceledException> (() =>
+                web3.Eth.DeployContract.SendRequestAndWaitForReceiptAsync(
+                contractAbi,
+                byteCode,
+                sender,
+                gasLimit,
+                cancellationToken,
+                hashValue
+            ));
+        }
+
+
+        
     }
 }
