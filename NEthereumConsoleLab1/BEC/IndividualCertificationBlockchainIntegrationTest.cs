@@ -221,6 +221,7 @@ namespace NEthereumConsoleLab1.BEC
                     cancellationToken,
                     inputHashValue
                 );
+           
             var contract = web3.Eth.GetContract(contractAbi, txReceipt.ContractAddress);
             var hashFunc = contract.GetFunction("hashValue");
             var actualHashValue = await hashFunc.CallAsync<string>();

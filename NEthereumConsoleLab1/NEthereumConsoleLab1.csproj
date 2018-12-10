@@ -10,6 +10,9 @@
     <EmbeddedResource Remove="testchain\**" />
     <None Remove="testchain\**" />
   </ItemGroup>
+  <ItemGroup>
+    <Compile Include="contracts\CertificationRegistryContract.cs" />
+  </ItemGroup>
  
  
   <ItemGroup>
